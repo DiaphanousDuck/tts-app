@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Free TTS Player with History</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      display: flex;
+      gap: 20px;
+    }
+    #left {
+      flex: 2;
+    }
+    #right {
+      flex: 1;
+      border-left: 1px solid #ccc;
+      padding-left: 20px;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    audio {
+      margin-top: 20px;
+      width: 100%;
+    }
+    .entry {
+      background: #f7f7f7;
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+    }
+    .delete-btn {
+      position: absolute;
+      right: 10px;
+      top: 6px;
+      cursor: pointer;
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="left">
+    <h1>Text to Speech Player</h1>
+
+    <textarea id="text" rows="4" placeholder="Enter text here..."></textarea>
+    <br>
+    <button onclick="playAudio()">Play</button>
+
+    <audio id="audio" controls style="display:none;"></audio>
+  </div>
+
+  <div id="right">
+    <h2>History</h2>
+    <div id="history"></div>
+  </div>
+
+  <script>
+    // --- Load history on page load ---
+    function loadHistory() {
+      const historyDiv = document.getElementById("history");
+      historyDiv.innerHTML = "";
+
+      const entries = JSON.parse(localStorage.getItem("tts_history") || "[]");
+
+      entries.forEach((text, index) => {
+        const div = document.createElement("div");
+        div.className = "entry";
+        div.textContent = text;
+
+        // Load older entry into text box on click
+        div.onclick = () => {
+          document.getElementById("text").value = text;
+        };
+
+        // Delete button
+        const del = document.createElement("span");
+        del.className = "delete-btn";
+        del.textContent = "×";
+        del.onclick = (event) => {
+          event.stopPropagation();  // prevent loading text
+          deleteEntry(index);
+        };
+
+        div.appendChild(del);
+        historyDiv.appendChild(div);
+      });
+    }
+
+    // --- Save new entry ---
+    function saveEntry(text) {
+      let entries = JSON.parse(localStorage.getItem("tts_history") || "[]");
+
+      // Avoid duplicates and empty entries
+      if (text && !entries.includes(text)) {
+        entries.unshift(text);       // newest first
+        entries = entries.slice(0, 50); // keep max 50
+        localStorage.setItem("tts_history", JSON.stringify(entries));
+      }
+
+      loadHistory();
+    }
+
+    // --- Delete a single entry ---
+    function deleteEntry(index) {
+      let entries = JSON.parse(localStorage.getItem("tts_history") || "[]");
+      entries.splice(index, 1);
+      localStorage.setItem("tts_history", JSON.stringify(entries));
+      loadHistory();
+    }
+
+    // --- Play audio ---
+    function playAudio() {
+      const input = document.getElementById("text").value.trim();
+      if (!input) return alert("Please enter text.");
+
+      const encoded = encodeURIComponent(input);
+      const url = `http://tts.cyzon.us/tts?text=${encoded}`;
+
+      // Save text to history
+      saveEntry(input);
+
+      const audio = document.getElementById("audio");
+      audio.src = url;
+      audio.style.display = "block";
+      audio.play();
+    }
+
+    // Load history on initial page load
+    window.onload = loadHistory;
+  </script>
+
+</body>
+</html>
